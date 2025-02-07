@@ -137,6 +137,8 @@ const App = () => {
             step={0.1}
             min={0}
             max={2}
+            aria-label="Small"
+            valueLabelDisplay="auto"
           />
 
           <Typography gutterBottom>Max Completion Tokens</Typography>
@@ -146,6 +148,8 @@ const App = () => {
             step={1}
             min={1}
             max={8092}
+            aria-label="Small"
+            valueLabelDisplay="auto"
           />
 
           <FormGroup>
