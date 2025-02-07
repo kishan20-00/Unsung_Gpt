@@ -24,11 +24,14 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import Groq from "groq-sdk";
+
+const groq = new Groq({ apiKey: process.env.REACT_APP_GROQ_API_KEY, dangerouslyAllowBrowser: true });
 
 const App = () => {
   const [chatHistory, setChatHistory] = useState([]);
   const [userMessage, setUserMessage] = useState("");
-  const [selectedModel, setSelectedModel] = useState("deepseek-r1-distill-llama-70b");
+  const [selectedModel, setSelectedModel] = useState("llama-3.3-70b-versatile");
   const [temperature, setTemperature] = useState(0.5);
   const [maxTokens, setMaxTokens] = useState(1024);
   const [stream, setStream] = useState(false);
@@ -40,14 +43,40 @@ const App = () => {
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
 
-  const handleSendMessage = () => {
+  const getGroqChatCompletion = async (userInput) => {
+    try {
+      const response = await groq.chat.completions.create({
+        messages: [
+          { role: "system", content: "You are a helpful assistant." },
+          { role: "user", content: userInput },
+        ],
+        model: selectedModel,
+        temperature,
+        max_completion_tokens: maxTokens,
+        top_p: topP,
+        stop: stopSequence || null,
+        stream,
+      });
+      return response.choices[0]?.message?.content || "No response received.";
+    } catch (error) {
+      console.error("Error communicating with Groq API:", error);
+      return "An error occurred while fetching the response.";
+    }
+  };
+
+  const handleSendMessage = async () => {
     if (!userMessage) return;
 
-    // Simulate API interaction
-    const systemMessage = `You said: "${userMessage}"`; // Replace with actual API response logic
-
+    // Add user's message to chat history
     setChatHistory((prev) => [...prev, { role: "user", message: userMessage }]);
+
+    // Fetch response from Groq API
+    const systemMessage = await getGroqChatCompletion(userMessage);
+
+    // Add system's response to chat history
     setChatHistory((prev) => [...prev, { role: "system", message: systemMessage }]);
+
+    // Clear user input
     setUserMessage("");
   };
 
