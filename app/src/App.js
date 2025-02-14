@@ -24,6 +24,8 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import MicIcon from "@mui/icons-material/Mic";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.REACT_APP_GROQ_API_KEY, dangerouslyAllowBrowser: true });
@@ -43,6 +45,7 @@ const App = () => {
   const [stopSequence, setStopSequence] = useState("");
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
+  const [file, setFile] = useState(null);
 
   const getGroqChatCompletion = async (userInput, systemInput) => {
     try {
@@ -130,6 +133,98 @@ const App = () => {
       stream: true,
     });
   };
+
+  const handleFileUpload = (event) => {
+    const uploadedFile = event.target.files[0];
+    if (uploadedFile) {
+      setFile(uploadedFile);
+    }
+  };
+
+  const handleSendAudioRequest = async () => {
+    if (!file) {
+      alert("Please upload or record an audio file.");
+      return;
+    }
+
+    try {
+      let response;
+      const fileStream = file;
+
+      if (selectedModel === "whisper-large-v3-turbo") {
+        response = await groq.audio.transcriptions.create({
+          file: fileStream,
+          model: "whisper-large-v3-turbo",
+          prompt: "Specify context or spelling",
+          response_format: "json",
+          language: "en",
+          temperature: 0.0,
+        });
+      } else if (selectedModel === "whisper-large-v3") {
+        response = await groq.audio.translations.create({
+          file: fileStream,
+          model: "whisper-large-v3",
+          prompt: "Specify context or spelling",
+          response_format: "json",
+          temperature: 0.0,
+        });
+      } else if (selectedModel === "distil-whisper-large-v3-en") {
+        response = await groq.audio.transcriptions.create({
+          file: fileStream,
+          model: "distil-whisper-large-v3-en",
+          response_format: "verbose_json",
+        });
+      }
+
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "system", message: response.text || "Transcription/Translation complete." },
+      ]);
+    } catch (error) {
+      console.error("Error with audio API:", error);
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "system", message: "An error occurred while processing the audio." },
+      ]);
+    }
+  };
+
+  const renderAudioInterface = () => (
+    <Box sx={{ mt: 4 }}>
+      <Typography variant="h6">Upload or Record Audio</Typography>
+      <Button
+        variant="contained"
+        component="label"
+        startIcon={<UploadFileIcon />}
+        sx={{ mt: 2, mb: 2 }}
+      >
+        Upload Audio
+        <input
+          type="file"
+          accept="audio/*"
+          hidden
+          onChange={handleFileUpload}
+        />
+      </Button>
+      <Button
+        variant="contained"
+        startIcon={<MicIcon />}
+        onClick={() => alert("Recording feature not implemented yet.")}
+        sx={{ ml: 2, mb: 0 }}
+      >
+        Record Audio
+      </Button>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleSendAudioRequest}
+        disabled={!file}
+        sx={{ display: "block", mt: 2 }}
+      >
+        Send
+      </Button>
+    </Box>
+  );
 
   return (
     <Box>
@@ -303,6 +398,12 @@ const App = () => {
           sx={{ mb: 4 }}
         />
 
+        {["whisper-large-v3-turbo", "whisper-large-v3", "distil-whisper-large-v3-en"].includes(
+          selectedModel
+        )
+          ? renderAudioInterface()
+          : (
+            <Box>
         {/* Chat Interface */}
         <Typography variant="h6" sx={{ mt: 4 }}>
           Chat
@@ -321,6 +422,8 @@ const App = () => {
         >
           Send
         </Button>
+        </Box>
+          )}
 
         {/* Chat History */}
         <Box>
