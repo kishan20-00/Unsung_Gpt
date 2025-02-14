@@ -31,6 +31,7 @@ const groq = new Groq({ apiKey: process.env.REACT_APP_GROQ_API_KEY, dangerouslyA
 const App = () => {
   const [chatHistory, setChatHistory] = useState([]);
   const [userMessage, setUserMessage] = useState("");
+  const [systemMessage, setSystemMessage] = useState("You are a helpful assistant.");
   const [selectedModel, setSelectedModel] = useState("llama-3.3-70b-versatile");
   const [temperature, setTemperature] = useState(0.5);
   const [maxTokens, setMaxTokens] = useState(1024);
@@ -43,11 +44,11 @@ const App = () => {
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
 
-  const getGroqChatCompletion = async (userInput) => {
+  const getGroqChatCompletion = async (userInput, systemInput) => {
     try {
       const response = await groq.chat.completions.create({
         messages: [
-          { role: "system", content: "You are a helpful assistant." },
+          { role: "system", content: systemInput || "You are a helpful assistant." },
           { role: "user", content: userInput },
         ],
         model: selectedModel,
@@ -66,18 +67,68 @@ const App = () => {
 
   const handleSendMessage = async () => {
     if (!userMessage) return;
-
+  
     // Add user's message to chat history
     setChatHistory((prev) => [...prev, { role: "user", message: userMessage }]);
-
-    // Fetch response from Groq API
-    const systemMessage = await getGroqChatCompletion(userMessage);
-
-    // Add system's response to chat history
-    setChatHistory((prev) => [...prev, { role: "system", message: systemMessage }]);
-
+  
+    const systemContent = systemMessage || "You are a helpful assistant.";
+  
+    if (stream) {
+      // Stream mode
+      try {
+        // Add a placeholder for the system response
+        setChatHistory((prev) => [
+          ...prev,
+          { role: "system", message: "..." }, // Placeholder for streaming
+        ]);
+  
+        const stream = await getGroqChatStream(userMessage, systemContent);
+  
+        let systemResponse = ""; // Accumulated response
+        for await (const chunk of stream) {
+          const deltaContent = chunk.choices[0]?.delta?.content || "";
+  
+          // Append new content to the system response
+          systemResponse += deltaContent;
+  
+          // Update the placeholder with the latest system response
+          setChatHistory((prev) => [
+            ...prev.slice(0, -1), // Remove the last placeholder message
+            { role: "system", message: systemResponse },
+          ]);
+        }
+      } catch (error) {
+        console.error("Error during streaming:", error);
+        setChatHistory((prev) => [
+          ...prev,
+          { role: "system", message: "An error occurred during streaming." },
+        ]);
+      }
+    } else {
+      // Non-stream mode
+      const systemResponse = await getGroqChatCompletion(userMessage, systemContent);
+  
+      // Add system's response to chat history
+      setChatHistory((prev) => [...prev, { role: "system", message: systemResponse }]);
+    }
+  
     // Clear user input
     setUserMessage("");
+  };
+
+  const getGroqChatStream = async (userInput, systemInput) => {
+    return groq.chat.completions.create({
+      messages: [
+        { role: "system", content: systemInput },
+        { role: "user", content: userInput },
+      ],
+      model: selectedModel,
+      temperature,
+      max_completion_tokens: maxTokens,
+      top_p: topP,
+      stop: stopSequence || null,
+      stream: true,
+    });
   };
 
   return (
@@ -242,6 +293,16 @@ const App = () => {
           </Select>
         </FormControl>
 
+        <Container sx={{ mt: 4 }}>
+        {/* System Role Input */}
+        <TextField
+          label="System Role Content"
+          value={systemMessage}
+          onChange={(e) => setSystemMessage(e.target.value)}
+          fullWidth
+          sx={{ mb: 4 }}
+        />
+
         {/* Chat Interface */}
         <Typography variant="h6" sx={{ mt: 4 }}>
           Chat
@@ -285,6 +346,7 @@ const App = () => {
             </Box>
           ))}
         </Box>
+        </Container>
       </Container>
     </Box>
   );
