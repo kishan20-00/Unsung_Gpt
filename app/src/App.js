@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AppBar,
   Toolbar,
@@ -27,6 +27,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import MicIcon from "@mui/icons-material/Mic";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Groq from "groq-sdk";
+import loadingGif from './ai2.gif';
 
 const groq = new Groq({ apiKey: process.env.REACT_APP_GROQ_API_KEY, dangerouslyAllowBrowser: true });
 
@@ -46,6 +47,16 @@ const App = () => {
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [file, setFile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate a delay for loading or complete initial setup
+    const timer = setTimeout(() => {
+      setIsLoading(false); // Set loading to false after a delay
+    }, 3000); // Adjust delay as needed (e.g., 2 seconds)
+
+    return () => clearTimeout(timer); // Clean up timer if the component unmounts
+  }, []);
 
   const getGroqChatCompletion = async (userInput, systemInput) => {
     try {
@@ -67,6 +78,14 @@ const App = () => {
       return "An error occurred while fetching the response.";
     }
   };
+
+  if (isLoading) {
+    return (
+      <div style={styles.fullScreenContainer}>
+        <img src={loadingGif} alt="Loading..." />
+      </div>
+    );
+  }
 
   const handleSendMessage = async () => {
     if (!userMessage) return;
@@ -454,5 +473,25 @@ const App = () => {
     </Box>
   );
 };
+
+const styles = {
+  fullScreenContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100vh",
+    width: "100vw",
+    backgroundColor: "black", // Optional, to create a uniform background
+    margin: 0,
+    padding: 0,
+    overflow: "hidden", // Prevent scrollbars
+  },
+  fullScreenImage: {
+    maxHeight: "100%",
+    maxWidth: "100%",
+    objectFit: "cover", // Ensures the image covers the screen without distortion
+  },
+};
+
 
 export default App;
