@@ -48,6 +48,8 @@ const App = () => {
   const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
   const [file, setFile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [verboseJson, setVerboseJson] = useState(false);
+  const [language, setLanguage] = useState("en");
 
   useEffect(() => {
     // Simulate a delay for loading or complete initial setup
@@ -138,6 +140,15 @@ const App = () => {
     setUserMessage("");
   };
 
+  // Handle checkbox change
+  const handleCheckboxChange = (event) => {
+    if (event.target.checked) {
+      setVerboseJson("verbose_json");
+    } else {
+      setVerboseJson("");
+    }
+  };
+
   const getGroqChatStream = async (userInput, systemInput) => {
     return groq.chat.completions.create({
       messages: [
@@ -165,39 +176,43 @@ const App = () => {
       alert("Please upload or record an audio file.");
       return;
     }
-
+  
     try {
       let response;
       const fileStream = file;
-
+      const commonParams = {
+        file: fileStream,
+        temperature: temperature,
+      };
+  
+      if (verboseJson) {
+        commonParams.response_format = verboseJson; // Conditionally add response_format
+      }
+  
       if (selectedModel === "whisper-large-v3-turbo") {
         response = await groq.audio.transcriptions.create({
-          file: fileStream,
+          ...commonParams,
           model: "whisper-large-v3-turbo",
-          prompt: "Specify context or spelling",
-          response_format: "json",
-          language: "en",
-          temperature: 0.0,
+          language: language,
         });
       } else if (selectedModel === "whisper-large-v3") {
         response = await groq.audio.translations.create({
-          file: fileStream,
+          ...commonParams,
           model: "whisper-large-v3",
-          prompt: "Specify context or spelling",
-          response_format: "json",
-          temperature: 0.0,
         });
       } else if (selectedModel === "distil-whisper-large-v3-en") {
         response = await groq.audio.transcriptions.create({
-          file: fileStream,
+          ...commonParams,
           model: "distil-whisper-large-v3-en",
-          response_format: "verbose_json",
         });
       }
-
+  
       setChatHistory((prev) => [
         ...prev,
-        { role: "system", message: response.text || "Transcription/Translation complete." },
+        {
+          role: "system",
+          message: response.text || "Transcription/Translation complete.",
+        },
       ]);
     } catch (error) {
       console.error("Error with audio API:", error);
@@ -207,6 +222,7 @@ const App = () => {
       ]);
     }
   };
+  
 
   const renderAudioInterface = () => (
     <Box sx={{ mt: 4 }}>
@@ -245,57 +261,195 @@ const App = () => {
     </Box>
   );
 
-  return (
-    <Box>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            onClick={() => setLeftDrawerOpen(true)}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Unsung Fields Cloud Playground
-          </Typography>
-          <IconButton
-            edge="end"
-            color="inherit"
-            aria-label="menu"
-            onClick={() => setRightDrawerOpen(true)}
-          >
-            <MenuIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
-
-      {/* Left Drawer */}
-      <Drawer anchor="left" open={leftDrawerOpen} onClose={() => setLeftDrawerOpen(false)}>
-        <Box sx={{ width: 250, padding: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Options
-          </Typography>
-          <Button fullWidth sx={{ mb: 1 }}>Documentation</Button>
-          <Button fullWidth sx={{ mb: 1 }}>Metrics</Button>
-          <Button fullWidth sx={{ mb: 1 }}>API Keys</Button>
-          <Button fullWidth sx={{ mb: 1 }}>Settings</Button>
-          <Divider sx={{ my: 2 }} />
-          <Button fullWidth sx={{ mb: 1 }}>Status</Button>
-          <Button fullWidth sx={{ mb: 1 }}>Discord</Button>
-          <Button fullWidth>Chat with us</Button>
-        </Box>
-      </Drawer>
-
-      {/* Right Drawer */}
-      <Drawer anchor="right" open={rightDrawerOpen} onClose={() => setRightDrawerOpen(false)}>
-        <Box sx={{ width: 300, padding: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Parameters
-          </Typography>
-
+  const renderRightSidebar = () => {
+    if (selectedModel === "distil-whisper-large-v3-en") {
+      return (
+        <Box>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={verboseJson === "verbose_json"}
+                onChange={handleCheckboxChange}
+              />
+            }
+            label="Verbose JSON"
+          />
           <Typography gutterBottom>Temperature</Typography>
+          <Slider
+            value={temperature}
+            onChange={(e, value) => setTemperature(value)}
+            step={0.1}
+            min={0}
+            max={0}
+            aria-label="Temperature"
+            valueLabelDisplay="auto"
+          />
+        </Box>
+      );
+    } else if (selectedModel === "whisper-large-v3") {
+      return (
+        <Box>
+          <Typography gutterBottom>Response Format</Typography>
+          <FormGroup>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={verboseJson === "verbose_json"}
+                  onChange={handleCheckboxChange}
+                />
+              }
+              label="JSON Mode"
+            />
+            <Typography gutterBottom>Temperature</Typography>
+          <Slider
+            value={temperature}
+            onChange={(e, value) => setTemperature(value)}
+            step={0.1}
+            min={0}
+            max={0}
+            aria-label="Temperature"
+            valueLabelDisplay="auto"
+          />
+          </FormGroup>
+        </Box>
+      );
+    } else if (selectedModel === "whisper-large-v3-turbo") {
+      return (
+        <Box>
+          <Typography gutterBottom>Response Format</Typography>
+          <FormGroup>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={verboseJson === "verbose_json"}
+                  onChange={handleCheckboxChange}
+                />
+              }
+              label="JSON Mode"
+            />
+          </FormGroup>
+          <Typography gutterBottom>Language</Typography>
+          <Select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            fullWidth
+          >
+            <MenuItem value="en">English</MenuItem>
+            <MenuItem value="zh">Chinese</MenuItem>
+            <MenuItem value="de">German</MenuItem>
+            <MenuItem value="es">Spanish</MenuItem>
+            <MenuItem value="ru">Russian</MenuItem>
+            <MenuItem value="ko">Korean</MenuItem>
+            <MenuItem value="fr">French</MenuItem>
+            <MenuItem value="ja">Japanese</MenuItem>
+            <MenuItem value="pt">Portuguese</MenuItem>
+            <MenuItem value="tr">Turkish</MenuItem>
+            <MenuItem value="pl">Polish</MenuItem>
+            <MenuItem value="ca">Catalan</MenuItem>
+            <MenuItem value="nl">Dutch</MenuItem>
+            <MenuItem value="ar">Arabic</MenuItem>
+            <MenuItem value="sv">Swedish</MenuItem>
+            <MenuItem value="it">Italian</MenuItem>
+            <MenuItem value="id">Indonesian</MenuItem>
+            <MenuItem value="hi">Hindi</MenuItem>
+            <MenuItem value="fi">Finnish</MenuItem>
+            <MenuItem value="vi">Vietnamese</MenuItem>
+            <MenuItem value="he">Hebrew</MenuItem>
+            <MenuItem value="uk">Ukrainian</MenuItem>
+            <MenuItem value="el">Greek</MenuItem>
+            <MenuItem value="ms">Malay</MenuItem>
+            <MenuItem value="cs">Czech</MenuItem>
+            <MenuItem value="ro">Romanian</MenuItem>
+            <MenuItem value="da">Danish</MenuItem>
+            <MenuItem value="ta">Tamil</MenuItem>
+            <MenuItem value="no">Norwegian</MenuItem>
+            <MenuItem value="th">Thai</MenuItem>
+            <MenuItem value="ur">Urdu</MenuItem>
+            <MenuItem value="hr">Croatian</MenuItem>
+            <MenuItem value="bg">Bulgarian</MenuItem>
+            <MenuItem value="lt">Lithuanian</MenuItem>
+            <MenuItem value="la">Latin</MenuItem>
+            <MenuItem value="mi">Maori</MenuItem>
+            <MenuItem value="ml">Malayalam</MenuItem>
+            <MenuItem value="cy">Welsh</MenuItem>
+            <MenuItem value="sk">Slovak</MenuItem>
+            <MenuItem value="te">Telugu</MenuItem>
+            <MenuItem value="fa">Persian</MenuItem>
+            <MenuItem value="lv">Latvian</MenuItem>
+            <MenuItem value="bn">Bengali</MenuItem>
+            <MenuItem value="sr">Serbian</MenuItem>
+            <MenuItem value="az">Azerbaijani</MenuItem>
+            <MenuItem value="sl">Slovenian</MenuItem>
+            <MenuItem value="kn">Kannada</MenuItem>
+            <MenuItem value="et">Estonian</MenuItem>
+            <MenuItem value="mk">Macedonian</MenuItem>
+            <MenuItem value="br">Breton</MenuItem>
+            <MenuItem value="eu">Basque</MenuItem>
+            <MenuItem value="is">Icelandic</MenuItem>
+            <MenuItem value="hy">Armenian</MenuItem>
+            <MenuItem value="ne">Nepali</MenuItem>
+            <MenuItem value="mn">Mongolian</MenuItem>
+            <MenuItem value="bs">Bosnian</MenuItem>
+            <MenuItem value="kk">Kazakh</MenuItem>
+            <MenuItem value="sq">Albanian</MenuItem>
+            <MenuItem value="sw">Swahili</MenuItem>
+            <MenuItem value="gl">Galician</MenuItem>
+            <MenuItem value="mr">Marathi</MenuItem>
+            <MenuItem value="pa">Panjabi</MenuItem>
+            <MenuItem value="si">Sinhala</MenuItem>
+            <MenuItem value="km">Khmer</MenuItem>
+            <MenuItem value="sn">Shona</MenuItem>
+            <MenuItem value="yo">Yoruba</MenuItem>
+            <MenuItem value="so">Somali</MenuItem>
+            <MenuItem value="af">Afrikaans</MenuItem>
+            <MenuItem value="oc">Occitan</MenuItem>
+            <MenuItem value="ka">Georgian</MenuItem>
+            <MenuItem value="be">Belarusian</MenuItem>
+            <MenuItem value="tg">Tajik</MenuItem>
+            <MenuItem value="sd">Sindhi</MenuItem>
+            <MenuItem value="gu">Gujarati</MenuItem>
+            <MenuItem value="am">Amharic</MenuItem>
+            <MenuItem value="yi">Yiddish</MenuItem>
+            <MenuItem value="lo">Lao</MenuItem>
+            <MenuItem value="uz">Uzbek</MenuItem>
+            <MenuItem value="fo">Faroese</MenuItem>
+            <MenuItem value="ht">Haitian Creole</MenuItem>
+            <MenuItem value="af">Pashto</MenuItem>
+            <MenuItem value="tk">Turkmen</MenuItem>
+            <MenuItem value="nn">Nynorsk</MenuItem>
+            <MenuItem value="mt">Maltese</MenuItem>
+            <MenuItem value="sa">Sanskrit</MenuItem>
+            <MenuItem value="lb">Luxembourgish</MenuItem>
+            <MenuItem value="my">Myanmar</MenuItem>
+            <MenuItem value="bo">Tibetan</MenuItem>
+            <MenuItem value="tl">Tagalog</MenuItem>
+            <MenuItem value="mg">Malagasy</MenuItem>
+            <MenuItem value="as">Assamese</MenuItem>
+            <MenuItem value="tt">Tatar</MenuItem>
+            <MenuItem value="haw">Hawaiian</MenuItem>
+            <MenuItem value="ln">Lingala</MenuItem>
+            <MenuItem value="ha">Hausa</MenuItem>
+            <MenuItem value="ba">Bashkir</MenuItem>
+            <MenuItem value="jv">Javanese</MenuItem>
+            <MenuItem value="su">Sundanese</MenuItem>
+            <MenuItem value="yue">Cantonese</MenuItem>
+          </Select>
+          <Typography gutterBottom>Temperature</Typography>
+          <Slider
+            value={temperature}
+            onChange={(e, value) => setTemperature(value)}
+            step={0.1}
+            min={0}
+            max={0}
+            aria-label="Temperature"
+            valueLabelDisplay="auto"
+          />
+        </Box>
+      );
+    } else {
+      return (
+        <Box>
+        <Typography gutterBottom>Temperature</Typography>
           <Slider
             value={temperature}
             onChange={(e, value) => setTemperature(value)}
@@ -375,6 +529,63 @@ const App = () => {
               />
             </AccordionDetails>
           </Accordion>
+          </Box>
+      );
+    }
+  };
+
+
+  return (
+    <Box>
+      <AppBar position="static">
+        <Toolbar>
+          <IconButton
+            edge="start"
+            color="inherit"
+            aria-label="menu"
+            onClick={() => setLeftDrawerOpen(true)}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            Unsung Fields Cloud Playground
+          </Typography>
+          <IconButton
+            edge="end"
+            color="inherit"
+            aria-label="menu"
+            onClick={() => setRightDrawerOpen(true)}
+          >
+            <MenuIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+
+      {/* Left Drawer */}
+      <Drawer anchor="left" open={leftDrawerOpen} onClose={() => setLeftDrawerOpen(false)}>
+        <Box sx={{ width: 250, padding: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Options
+          </Typography>
+          <Button fullWidth sx={{ mb: 1 }}>Documentation</Button>
+          <Button fullWidth sx={{ mb: 1 }}>Metrics</Button>
+          <Button fullWidth sx={{ mb: 1 }}>API Keys</Button>
+          <Button fullWidth sx={{ mb: 1 }}>Settings</Button>
+          <Divider sx={{ my: 2 }} />
+          <Button fullWidth sx={{ mb: 1 }}>Status</Button>
+          <Button fullWidth sx={{ mb: 1 }}>Discord</Button>
+          <Button fullWidth>Chat with us</Button>
+        </Box>
+      </Drawer>
+
+      {/* Right Drawer */}
+      <Drawer anchor="right" open={rightDrawerOpen} onClose={() => setRightDrawerOpen(false)}>
+        <Box sx={{ width: 300, padding: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Parameters
+          </Typography>
+
+          {renderRightSidebar()}
         </Box>
       </Drawer>
 
