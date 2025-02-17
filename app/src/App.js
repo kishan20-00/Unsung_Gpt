@@ -21,6 +21,7 @@ import {
   Drawer,
   IconButton,
   Divider,
+  ListSubheader,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -594,28 +595,102 @@ const App = () => {
         <FormControl fullWidth sx={{ mb: 4 }}>
           <InputLabel>Select Model</InputLabel>
           <Select
-            value={selectedModel}
-            label="Select Model"
-            onChange={(e) => setSelectedModel(e.target.value)}
-          >
-            {[
-              "deepseek-r1-distill-llama-70b",
-              "distil-whisper-large-v3-en",
-              "gemma2-9b-it",
-              "llama-3.3-70b-versatile",
-              "llama-3.1-8b-instant",
-              "llama-guard-3-8b",
-              "llama3-70b-8192",
-              "llama3-8b-8192",
-              "mixtral-8x7b-32768",
-              "whisper-large-v3",
-              "whisper-large-v3-turbo",
-            ].map((model) => (
-              <MenuItem key={model} value={model}>
-                {model}
-              </MenuItem>
-            ))}
-          </Select>
+  value={selectedModel}
+  label="Select Model"
+  onChange={(e) => setSelectedModel(e.target.value)}
+>
+  {/* Group 1 */}
+  <ListSubheader>Alibaba Cloud</ListSubheader>
+  {[
+    "qwen-2.5-32b",
+    "qwen-2.5-coder-32b",   
+  ].map((model) => (
+    <MenuItem key={model} value={model}>
+      {model}
+    </MenuItem>
+  ))}
+
+  {/* Group 2 */}
+  <ListSubheader>DeepSeek / Alibaba Cloud</ListSubheader>
+  {[
+    "deepseek-r1-distill-qwen-32b",
+  ].map((model) => (
+    <MenuItem key={model} value={model}>
+      {model}
+    </MenuItem>
+  ))}
+
+  {/* Group 2.5 */}
+  <ListSubheader>DeepSeek / Meta</ListSubheader>
+  {[
+    "deepseek-r1-distill-llama-70b",
+  ].map((model) => (
+    <MenuItem key={model} value={model}>
+      {model}
+    </MenuItem>
+  ))}
+
+  {/* Group 2.5 */}
+  <ListSubheader>Google</ListSubheader>
+  {[
+      "gemma2-9b-it",
+  ].map((model) => (
+    <MenuItem key={model} value={model}>
+      {model}
+    </MenuItem>
+  ))}
+
+  {/* Group 2.5 */}
+  <ListSubheader>Hugging Face</ListSubheader>
+  {[
+    "distil-whisper-large-v3-en",
+  ].map((model) => (
+    <MenuItem key={model} value={model}>
+      {model}
+    </MenuItem>
+  ))}
+
+  {/* Group 3 */}
+  <ListSubheader>Meta</ListSubheader>
+  {[
+    "llama-3.1-8b-instant",
+    "llama-3.2-11b-vision-preview",
+    "llama-3.2-1b-preview",
+    "llama-3.2-3b-preview",
+    "llama-3.2-90b-vision-preview",
+    "llama-3.2-70b-specdec",
+    "llama-3.3-70b-versatile",
+    "llama-guard-3-8b",
+    "llama3-70b-8192",
+    "llama3-8b-8192",
+  ].map((model) => (
+    <MenuItem key={model} value={model}>
+      {model}
+    </MenuItem>
+  ))}
+
+  {/* Group 4 */}
+  <ListSubheader>Mistral</ListSubheader>
+  {[
+    "mixtral-8x7b-32768",
+  ].map((model) => (
+    <MenuItem key={model} value={model}>
+      {model}
+    </MenuItem>
+  ))}
+
+  {/* Group 5 */}
+  <ListSubheader>OpenAI</ListSubheader>
+  {[
+    "whisper-large-v3",
+    "whisper-large-v3-turbo",
+  ].map((model) => (
+    <MenuItem key={model} value={model}>
+      {model}
+    </MenuItem>
+  ))}
+</Select>
+
         </FormControl>
 
         <Container sx={{ mt: 4 }}>
