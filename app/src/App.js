@@ -51,6 +51,7 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [verboseJson, setVerboseJson] = useState(false);
   const [language, setLanguage] = useState("en");
+  const [imageFile, setImageFile] = useState(null);
 
   useEffect(() => {
     // Simulate a delay for loading or complete initial setup
@@ -88,7 +89,11 @@ const App = () => {
         <img src={loadingGif} alt="Loading..." />
       </div>
     );
-  }
+  };
+
+  const handleImageUpload = (event) => {
+    setImageFile(event.target.files[0]);
+  };
 
   const handleSendMessage = async () => {
     if (!userMessage) return;
@@ -223,7 +228,63 @@ const App = () => {
       ]);
     }
   };
+
+  const handleSendVisionRequest = async () => {
+    if (!imageFile) {
+      alert("Please upload an image file.");
+      return;
+    }
   
+    try {
+      // Convert the image file to base64
+      const convertToBase64 = (file) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(",")[1]); // Get base64 part
+          reader.onerror = (error) => reject(error);
+          reader.readAsDataURL(file);
+        });
+  
+      const base64Image = await convertToBase64(imageFile);
+  
+      // Prepare the messages array with both text and image content
+      const messages = [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userMessage || "What is in this image?" },
+            { type: "image_url", image_url: { url: `data:image/png;base64,${base64Image}` } }, // Base64 URL
+          ],
+        },
+      ];
+  
+      // Send the request to the Groq API
+      const response = await groq.chat.completions.create({
+        model: selectedModel, // e.g., "llama-3.2-11b-vision-preview"
+        messages: messages,
+        temperature: temperature,
+        max_completion_tokens: maxTokens,
+        top_p: topP,
+        stream: stream,
+        stop: stopSequence,
+      });
+  
+      // Update chat history with the response
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          role: "system",
+          message: response.choices[0].message.content || "Vision processing complete.",
+        },
+      ]);
+    } catch (error) {
+      console.error("Error with vision API:", error);
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "system", message: "An error occurred while processing the image." },
+      ]);
+    }
+  };  
 
   const renderAudioInterface = () => (
     <Box sx={{ mt: 4 }}>
@@ -260,6 +321,42 @@ const App = () => {
         Send
       </Button>
     </Box>
+  );
+
+  const renderVisionInterface = () => (
+    <div>
+      <Button
+        variant="outlined"
+        component="label"
+        style={{ marginBottom: "10px" }}
+      >
+        Upload Image
+        <input
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={handleImageUpload}
+        />
+      </Button>
+      {imageFile && <p>Selected Image: {imageFile.name}</p>}
+
+      <TextField
+        fullWidth
+        label="Enter your message"
+        value={userMessage}
+        onChange={(e) => setUserMessage(e.target.value)}
+        style={{ marginTop: "10px" }}
+      />
+
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleSendVisionRequest}
+        style={{ marginTop: "10px" }}
+      >
+        Send
+      </Button>
+    </div>
   );
 
   const renderRightSidebar = () => {
@@ -707,7 +804,11 @@ const App = () => {
           selectedModel
         )
           ? renderAudioInterface()
-          : (
+          :["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"].includes(
+            selectedModel
+          )
+            ? renderVisionInterface() 
+            :(
             <Box>
         {/* Chat Interface */}
         <Typography variant="h6" sx={{ mt: 4 }}>
