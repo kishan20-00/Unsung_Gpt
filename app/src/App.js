@@ -98,8 +98,15 @@ const App = () => {
   const handleSendMessage = async () => {
     if (!userMessage) return;
   
-    // Add user's message to chat history
-    setChatHistory((prev) => [...prev, { role: "user", message: userMessage }]);
+    // Count tokens for the user's message
+    const userTokenCount = await countTokens(userMessage);
+    console.log(userMessage);
+  
+    // Add user's message to chat history with token count
+    setChatHistory((prev) => [
+      ...prev,
+      { role: "user", message: userMessage, tokens: userTokenCount },
+    ]);
   
     const systemContent = systemMessage || "You are a helpful assistant.";
   
@@ -109,7 +116,7 @@ const App = () => {
         // Add a placeholder for the system response
         setChatHistory((prev) => [
           ...prev,
-          { role: "system", message: "..." }, // Placeholder for streaming
+          { role: "system", message: "...", tokens: 0 }, // Placeholder for streaming
         ]);
   
         const stream = await getGroqChatStream(userMessage, systemContent);
@@ -124,22 +131,35 @@ const App = () => {
           // Update the placeholder with the latest system response
           setChatHistory((prev) => [
             ...prev.slice(0, -1), // Remove the last placeholder message
-            { role: "system", message: systemResponse },
+            { role: "system", message: systemResponse, tokens: 0 }, // Tokens will be updated later
           ]);
         }
+  
+        // Count tokens for the system's response after streaming completes
+        const systemTokenCount = await countTokens(systemResponse);
+        setChatHistory((prev) => [
+          ...prev.slice(0, -1), // Remove the last message
+          { role: "system", message: systemResponse, tokens: systemTokenCount },
+        ]);
       } catch (error) {
         console.error("Error during streaming:", error);
         setChatHistory((prev) => [
           ...prev,
-          { role: "system", message: "An error occurred during streaming." },
+          { role: "system", message: "An error occurred during streaming.", tokens: 0 },
         ]);
       }
     } else {
       // Non-stream mode
       const systemResponse = await getGroqChatCompletion(userMessage, systemContent);
   
-      // Add system's response to chat history
-      setChatHistory((prev) => [...prev, { role: "system", message: systemResponse }]);
+      // Count tokens for the system's response
+      const systemTokenCount = await countTokens(systemResponse);
+  
+      // Add system's response to chat history with token count
+      setChatHistory((prev) => [
+        ...prev,
+        { role: "system", message: systemResponse, tokens: systemTokenCount },
+      ]);
     }
   
     // Clear user input
@@ -632,6 +652,28 @@ const App = () => {
     }
   };
 
+  const countTokens = async (text) => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/count_tokens", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to count tokens");
+      }
+  
+      const data = await response.json();
+      return data.token_count;
+    } catch (error) {
+      console.error("Error counting tokens:", error);
+      return 0; // Fallback to 0 if token counting fails
+    }
+  };
+
 
   return (
     <Box>
@@ -646,7 +688,7 @@ const App = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Unsung Fields Cloud Playground
+            Cloud Playground
           </Typography>
           <IconButton
             edge="end"
@@ -851,6 +893,9 @@ const App = () => {
                 }}
               >
                 {chat.message}
+                <Typography variant="caption" sx={{ display: "block", mt: 1, color: "#666" }}>
+          Tokens: {chat.tokens}
+        </Typography>
               </Box>
             </Box>
           ))}
