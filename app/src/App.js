@@ -654,7 +654,7 @@ const App = () => {
 
   const countTokens = async (text) => {
     try {
-      const response = await fetch("http://127.0.0.1:5000/count_tokens", {
+      const response = await fetch("https://flask-app-991598001448.us-central1.run.app/count_tokens", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -688,7 +688,7 @@ const App = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Cloud Playground
+            Unsung Fields Cloud Playground
           </Typography>
           <IconButton
             edge="end"

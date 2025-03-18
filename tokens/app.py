@@ -19,12 +19,12 @@ def count_tokens():
     
     # Get the input text
     text = data['text']
-    print(text)
+    print("Sent text: ", text)
     
     # Tokenize the text and count the tokens
     tokens = encoding.encode(text)
     token_count = len(tokens)
-    print(token_count)
+    print("Predicted Token Counts: ", token_count)
     
     # Return the token count as a JSON response
     return jsonify({"token_count": token_count})
