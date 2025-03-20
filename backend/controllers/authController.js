@@ -5,10 +5,10 @@ const jwt = require("jsonwebtoken");
 // Register User
 exports.registerUser = async (req, res) => {
   try {
-    const { name, age, inputTokens, outputTokens, subscription, password } = req.body;
+    const { name, email, inputTokens = 0, outputTokens = 0, subscription = "Free", password } = req.body;
 
     // Validate required fields
-    if (!name || !email || !password || !inputTokens || !outputTokens || !subscription) {
+    if (!name || !email || !password) {
       return res.status(400).json({ message: "Name, email, and password are required" });
     }
 
@@ -27,9 +27,9 @@ exports.registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      inputTokens, 
-      outputTokens, 
-      subscription,
+      inputTokens: Number(inputTokens) || 0, 
+      outputTokens: Number(outputTokens) || 0, 
+      subscription: subscription || 'Free',
     });
 
     // Save the user to the database
@@ -100,6 +100,42 @@ exports.updateUser = async (req, res) => {
     res.status(200).json({ message: "User updated successfully", user: updatedUser });
   } catch (error) {
     console.error("Error during user update:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Update User Tokens and Subscription
+exports.updateUserTokensAndSubscription = async (req, res) => {
+  try {
+    const { inputTokens, outputTokens, subscription } = req.body;
+
+    // Find the user by ID (from the authenticated token)
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Convert inputTokens and outputTokens to numbers, ensuring they are valid
+    const newInputTokens = Number(inputTokens) || 0;
+    const newOutputTokens = Number(outputTokens) || 0;
+
+    // Update values by adding to existing ones
+    user.inputTokens = (Number(user.inputTokens) || 0) + newInputTokens;
+    user.outputTokens = (Number(user.outputTokens) || 0) + newOutputTokens;
+
+    // Update subscription if provided
+    if (subscription) {
+      user.subscription = subscription;
+    }
+
+    // Save the updated user
+    await user.save();
+
+    // Respond with the updated user (excluding the password)
+    const updatedUser = await User.findById(req.user.id).select("-password");
+    res.status(200).json({ message: "User tokens and subscription updated successfully", user: updatedUser });
+  } catch (error) {
+    console.error("Error updating tokens and subscription:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

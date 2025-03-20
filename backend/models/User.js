@@ -3,9 +3,9 @@ const mongoose = require("mongoose");
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  inputTokens: { type: String },
-  outputTokens: { type: String },
-  subscription: { type: String},
+  inputTokens: { type: Number, default: 0 }, 
+  outputTokens: { type: Number, default: 0 }, 
+  subscription: { type: mongoose.Schema.Types.ObjectId, ref: "Plan" },
   password: { type: String, required: true },
 });
 
