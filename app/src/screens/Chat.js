@@ -76,7 +76,7 @@ const Chat = () => {
       try {
         // Fetch user profile to verify authentication
         const profileResponse = await axios.get(
-          "http://localhost:5000/api/auth/profile",
+          "https://unsung-gpt-2uqq.vercel.app/api/auth/profile",
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -123,7 +123,7 @@ const Chat = () => {
 
     try {
       await axios.put(
-        "http://localhost:5000/api/auth/updateTokens",
+        "https://unsung-gpt-2uqq.vercel.app/api/auth/updateTokens",
         { [type]: tokens }, // `type` can be "inputTokens" or "outputTokens"
         {
           headers: { Authorization: `Bearer ${token}` },

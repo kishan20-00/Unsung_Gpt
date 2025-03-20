@@ -21,7 +21,7 @@ const Signup = () => {
 
   const handleSignup = async () => {
     try {
-      await axios.post("http://localhost:5000/api/auth/register", { name, email, password });
+      await axios.post("https://unsung-gpt-2uqq.vercel.app/api/auth/register", { name, email, password });
       alert("Signup Successful! Please Login");
       navigate("/");
     } catch (err) {

@@ -20,7 +20,7 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", { email, password });
+      const res = await axios.post("https://unsung-gpt-2uqq.vercel.app/api/auth/login", { email, password });
       localStorage.setItem("token", res.data.token); // Store token in local storage
         alert("Login Successful!");
         navigate("/Home"); // Redirect to home page
