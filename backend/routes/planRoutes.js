@@ -2,7 +2,8 @@ const express = require("express");
 const Plan = require("../models/Plan");
 const User = require("../models/User");
 const router = express.Router();
-const authMiddleware = require("../middleware/auth"); // Middleware for authentication
+const authMiddleware = require("../middleware/authMiddleware"); // Middleware for authentication
+const enforceTokenLimits = require("../middleware/enforceTokenLimits");
 
 // Create a new plan (Admin only)
 router.post("/plans", authMiddleware, async (req, res) => {
@@ -120,6 +121,16 @@ router.post("/users/:userId/reset-tokens", authMiddleware, async (req, res) => {
     res.status(200).json({ message: "Token usage reset successfully", user });
   } catch (error) {
     console.error("Error resetting token usage:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+router.post("/chat", enforceTokenLimits, async (req, res) => {
+  try {
+    // Handle chat logic here
+    res.status(200).json({ message: "Chat processed successfully" });
+  } catch (error) {
+    console.error("Error processing chat:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
