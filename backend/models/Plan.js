@@ -8,4 +8,4 @@ const planSchema = new mongoose.Schema({
   description: { type: String }, // Description of the plan
 });
 
-module.exports = mongoose.model("Plan", planSchema);
+module.exports = mongoose.model("PlanGPT", planSchema);
