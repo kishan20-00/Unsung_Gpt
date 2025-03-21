@@ -116,31 +116,15 @@ exports.updateUserTokensAndSubscription = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Fetch the plan associated with the subscription
-    const plan = await Plan.findOne({ name: subscription || user.subscription });
-    if (!plan) {
-      return res.status(404).json({ message: "Plan not found" });
-    }
-
     // Convert inputTokens and outputTokens to numbers, ensuring they are valid
     const newInputTokens = Number(inputTokens) || 0;
     const newOutputTokens = Number(outputTokens) || 0;
 
-    // Calculate the updated token usage
-    const updatedInputTokens = (Number(user.inputTokens)) || 0 + newInputTokens;
-    const updatedOutputTokens = (Number(user.outputTokens)) || 0 + newOutputTokens;
+    // Update values by adding to existing ones
+    user.inputTokens = (Number(user.inputTokens) || 0) + newInputTokens;
+    user.outputTokens = (Number(user.outputTokens) || 0) + newOutputTokens;
 
-    // Check if the updated tokens exceed the plan's limits
-    if (updatedInputTokens > plan.inputTokenLimit) {
-      return res.status(400).json({ message: "Input token limit exceeded for the current plan" });
-    }
-    if (updatedOutputTokens > plan.outputTokenLimit) {
-      return res.status(400).json({ message: "Output token limit exceeded for the current plan" });
-    }
-
-    // Update the user's tokens and subscription
-    user.inputTokens = updatedInputTokens;
-    user.outputTokens = updatedOutputTokens;
+    // Update subscription if provided
     if (subscription) {
       user.subscription = subscription;
     }
@@ -150,11 +134,7 @@ exports.updateUserTokensAndSubscription = async (req, res) => {
 
     // Respond with the updated user (excluding the password)
     const updatedUser = await User.findById(req.user.id).select("-password");
-    res.status(200).json({
-      message: "User tokens and subscription updated successfully",
-      user: updatedUser,
-      plan: plan.name, // Include the plan name in the response for clarity
-    });
+    res.status(200).json({ message: "User tokens and subscription updated successfully", user: updatedUser });
   } catch (error) {
     console.error("Error updating tokens and subscription:", error);
     res.status(500).json({ message: "Server error", error: error.message });
