@@ -264,7 +264,7 @@ const Chat = () => {
         console.error("Error in non-stream mode:", error);
         setChatHistory((prev) => [
           ...prev,
-          { role: "system", message: "An error occurred while generating the response.", tokens: 0 },
+          { role: "system", message: "The tokens limit has been exceeded.", tokens: 0 },
         ]);
       }
     }
