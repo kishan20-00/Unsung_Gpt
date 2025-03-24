@@ -82,6 +82,7 @@ const Chat = () => {
           }
         );
         setUserDetails(profileResponse.data); // User is logged in
+
         console.log("User is logged in:", profileResponse.data);
       } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -163,7 +164,7 @@ const Chat = () => {
   
       // Validate token limits before proceeding
       const validationResponse = await axios.post(
-        "https://unsung-gpt-2uqq.vercel.app/api/users/check-tokens",
+        `https://unsung-gpt-2uqq.vercel.app/api/plan/users/${userDetails._id}/check-tokens`,
         { inputTokens: userTokenCount, outputTokens: 0 }, // Only input tokens for now
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -218,7 +219,7 @@ const Chat = () => {
   
         // Update output tokens in the backend
         await axios.post(
-          "https://unsung-gpt-2uqq.vercel.app/api/users/check-tokens",
+          `https://unsung-gpt-2uqq.vercel.app/api/plan/users/${userDetails._id}/check-tokens`,
           { inputTokens: 0, outputTokens: systemTokenCount }, // Only output tokens now
           {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -247,7 +248,7 @@ const Chat = () => {
   
         // Update output tokens in the backend
         await axios.post(
-          "https://unsung-gpt-2uqq.vercel.app/api/users/check-tokens",
+          `https://unsung-gpt-2uqq.vercel.app/api/plan/users/${userDetails._id}/check-tokens`,
           { inputTokens: 0, outputTokens: systemTokenCount }, // Only output tokens now
           {
             headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
