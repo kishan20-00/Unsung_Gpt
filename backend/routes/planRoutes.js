@@ -75,26 +75,44 @@ router.post("/users/:userId/check-tokens", authMiddleware, async (req, res) => {
     const { userId } = req.params;
     const { inputTokens, outputTokens } = req.body;
 
-    // Find the user and their plan
-    const user = await User.findById(userId).populate("plan");
+    // Find the user and populate their subscription (plan)
+    const user = await User.findById(userId).populate("subscription");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Retrieve token limits from the user's plan
+    console.log(user);
+    const inputTokenLimit = user.subscription.inputTokenLimit; // From Plan model
+    const outputTokenLimit = user.subscription.outputTokenLimit; // From Plan model
+
+    // Retrieve used token amounts from the user
+    const userInputTokens = user.inputTokens; // From User model
+    const userOutputTokens = user.outputTokens; // From User model
+
     // Check if the token usage has exceeded the plan limits
-    if (user.inputTokensUsed + inputTokens > user.plan.inputTokenLimit) {
+    if (userInputTokens + inputTokens > inputTokenLimit) {
       return res.status(400).json({ message: "Input token limit exceeded" });
     }
-    if (user.outputTokensUsed + outputTokens > user.plan.outputTokenLimit) {
+    if (userOutputTokens + outputTokens > outputTokenLimit) {
       return res.status(400).json({ message: "Output token limit exceeded" });
     }
 
-    // Update token usage
-    user.inputTokensUsed += inputTokens;
-    user.outputTokensUsed += outputTokens;
+    // Update token usage in the User model
+    user.inputTokens += inputTokens;
+    user.outputTokens += outputTokens;
     await user.save();
 
-    res.status(200).json({ message: "Token usage updated successfully", user });
+    // Respond with success message and updated user data
+    res.status(200).json({
+      message: "Token usage updated successfully",
+      user: {
+        id: user._id,
+        inputTokens: user.inputTokens,
+        outputTokens: user.outputTokens,
+        subscription: user.subscription, // Include plan details in the response
+      },
+    });
   } catch (error) {
     console.error("Error checking token usage:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -140,35 +158,6 @@ router.post("/chat", enforceTokenLimits, async (req, res) => {
   }
 });
 
-router.post("/users/:userId/check-tokens", authMiddleware, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { inputTokens, outputTokens } = req.body;
 
-    // Find the user and their plan
-    const user = await User.findById(userId).populate("plan");
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Check if the token usage has exceeded the plan limits
-    if (user.inputTokensUsed + inputTokens > user.plan.inputTokenLimit) {
-      return res.status(400).json({ message: "Input token limit exceeded" });
-    }
-    if (user.outputTokensUsed + outputTokens > user.plan.outputTokenLimit) {
-      return res.status(400).json({ message: "Output token limit exceeded" });
-    }
-
-    // Update token usage
-    user.inputTokensUsed += inputTokens;
-    user.outputTokensUsed += outputTokens;
-    await user.save();
-
-    res.status(200).json({ message: "Token usage updated successfully", user });
-  } catch (error) {
-    console.error("Error checking token usage:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
 
 module.exports = router;

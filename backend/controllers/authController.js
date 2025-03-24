@@ -3,7 +3,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Plan = require("../models/Plan");
 
-// Register User
 exports.registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -29,15 +28,19 @@ exports.registerUser = async (req, res) => {
       return res.status(404).json({ message: "Default plan not found" });
     }
 
+    console.log("Default Plan ID:", defaultPlan._id); // Log the default plan ID
+
     // Create a new user
     const newUser = new User({
       name,
       email,
       password: hashedPassword,
-      plan: defaultPlan._id, // Assign the default plan
-      inputTokensUsed: 0,
-      outputTokensUsed: 0,
+      subscription: defaultPlan._id, // Assign the default plan ID (ObjectId)
+      inputTokens: 0, // Initialize input tokens
+      outputTokens: 0, // Initialize output tokens
     });
+
+    console.log("New User:", newUser); // Log the new user object
 
     // Save the user to the database
     await newUser.save();

@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   inputTokens: { type: Number, default: 0 }, 
   outputTokens: { type: Number, default: 0 }, 
-  subscription: { type: mongoose.Schema.Types.ObjectId, ref: "PlanGPT" },
+  subscription: { type: mongoose.Schema.Types.ObjectId, ref: "plangpts" },
   password: { type: String, required: true },
 });
 
