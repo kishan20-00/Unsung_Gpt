@@ -6,7 +6,7 @@ const Plan = require("../models/Plan");
 // Register User
 exports.registerUser = async (req, res) => {
   try {
-    const { name, email, inputTokens = 0, outputTokens = 0, subscription = "Free", password } = req.body;
+    const { name, email, password } = req.body;
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -23,14 +23,20 @@ exports.registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Find the default plan (e.g., "Free")
+    const defaultPlan = await Plan.findOne({ name: "Free" });
+    if (!defaultPlan) {
+      return res.status(404).json({ message: "Default plan not found" });
+    }
+
     // Create a new user
     const newUser = new User({
       name,
       email,
       password: hashedPassword,
-      inputTokens: Number(inputTokens) || 0, 
-      outputTokens: Number(outputTokens) || 0, 
-      subscription: subscription || 'Free',
+      plan: defaultPlan._id, // Assign the default plan
+      inputTokensUsed: 0,
+      outputTokensUsed: 0,
     });
 
     // Save the user to the database

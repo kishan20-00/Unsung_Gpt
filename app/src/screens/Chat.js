@@ -152,7 +152,33 @@ const Chat = () => {
   
     // Count tokens for the user's message
     const userTokenCount = await countTokens(userMessage);
-    await updateUserTokens(userTokenCount, "inputTokens");
+  
+    // Check if the user is eligible to process the request
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("User not logged in!");
+        return;
+      }
+  
+      // Validate token limits before proceeding
+      const validationResponse = await axios.post(
+        "https://unsung-gpt-2uqq.vercel.app/api/users/check-tokens",
+        { inputTokens: userTokenCount, outputTokens: 0 }, // Only input tokens for now
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+  
+      if (validationResponse.status !== 200) {
+        alert(validationResponse.data.message || "Token limit exceeded");
+        return;
+      }
+    } catch (error) {
+      console.error("Error validating token limits:", error);
+      alert("Error validating token limits. Please try again.");
+      return;
+    }
   
     // Add user's message to chat history with token count
     setChatHistory((prev) => [
@@ -189,7 +215,17 @@ const Chat = () => {
   
         // Count tokens for the system's response after streaming completes
         const systemTokenCount = await countTokens(systemResponse);
-        await updateUserTokens(systemTokenCount, "outputTokens"); // Update outputTokens
+  
+        // Update output tokens in the backend
+        await axios.post(
+          "https://unsung-gpt-2uqq.vercel.app/api/users/check-tokens",
+          { inputTokens: 0, outputTokens: systemTokenCount }, // Only output tokens now
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }
+        );
+  
+        // Update chat history with the final system response and token count
         setChatHistory((prev) => [
           ...prev.slice(0, -1), // Remove the last message
           { role: "system", message: systemResponse, tokens: systemTokenCount },
@@ -208,7 +244,15 @@ const Chat = () => {
   
         // Count tokens for the system's response
         const systemTokenCount = await countTokens(systemResponse);
-        await updateUserTokens(systemTokenCount, "outputTokens"); // Update outputTokens
+  
+        // Update output tokens in the backend
+        await axios.post(
+          "https://unsung-gpt-2uqq.vercel.app/api/users/check-tokens",
+          { inputTokens: 0, outputTokens: systemTokenCount }, // Only output tokens now
+          {
+            headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          }
+        );
   
         // Add system's response to chat history with token count
         setChatHistory((prev) => [
