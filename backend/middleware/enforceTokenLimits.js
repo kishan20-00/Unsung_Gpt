@@ -19,6 +19,11 @@ const enforceTokenLimits = async (req, res, next) => {
       return res.status(400).json({ message: "Output token limit exceeded" });
     }
 
+    // Update token usage
+    user.inputTokensUsed += inputTokens;
+    user.outputTokensUsed += outputTokens;
+    await user.save();
+
     // Proceed to the next middleware or route handler
     next();
   } catch (error) {

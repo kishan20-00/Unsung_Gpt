@@ -127,10 +127,46 @@ router.post("/users/:userId/reset-tokens", authMiddleware, async (req, res) => {
 
 router.post("/chat", enforceTokenLimits, async (req, res) => {
   try {
-    // Handle chat logic here
-    res.status(200).json({ message: "Chat processed successfully" });
+    const { message } = req.body;
+
+    // Simulate chat processing (replace with actual LLM logic)
+    const response = `You said: ${message}`;
+
+    // Respond with the chat result
+    res.status(200).json({ message: "Chat processed successfully", response });
   } catch (error) {
     console.error("Error processing chat:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+router.post("/users/:userId/check-tokens", authMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { inputTokens, outputTokens } = req.body;
+
+    // Find the user and their plan
+    const user = await User.findById(userId).populate("plan");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if the token usage has exceeded the plan limits
+    if (user.inputTokensUsed + inputTokens > user.plan.inputTokenLimit) {
+      return res.status(400).json({ message: "Input token limit exceeded" });
+    }
+    if (user.outputTokensUsed + outputTokens > user.plan.outputTokenLimit) {
+      return res.status(400).json({ message: "Output token limit exceeded" });
+    }
+
+    // Update token usage
+    user.inputTokensUsed += inputTokens;
+    user.outputTokensUsed += outputTokens;
+    await user.save();
+
+    res.status(200).json({ message: "Token usage updated successfully", user });
+  } catch (error) {
+    console.error("Error checking token usage:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
