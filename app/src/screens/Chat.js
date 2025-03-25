@@ -761,7 +761,7 @@ const Chat = () => {
 
   const countTokens = async (text) => {
     try {
-      const response = await fetch("https://flask-app-991598001448.us-central1.run.app/count_tokens", {
+      const response = await fetch("https://huggingtoken-991598001448.us-central1.run.app/count_tokens", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
