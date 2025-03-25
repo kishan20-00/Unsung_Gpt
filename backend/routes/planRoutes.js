@@ -69,7 +69,6 @@ router.put("/users/:userId/plan", authMiddleware, async (req, res) => {
   }
 });
 
-// Check token usage and enforce limits
 router.post("/users/:userId/check-tokens", authMiddleware, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -82,20 +81,19 @@ router.post("/users/:userId/check-tokens", authMiddleware, async (req, res) => {
     }
 
     // Retrieve token limits from the user's plan
-    console.log(user);
-    const inputTokenLimit = user.subscription.inputTokenLimit; // From Plan model
-    const outputTokenLimit = user.subscription.outputTokenLimit; // From Plan model
+    const inputTokenLimit = user.subscription.inputTokenLimit;
+    const outputTokenLimit = user.subscription.outputTokenLimit;
 
-    // Retrieve used token amounts from the user
-    const userInputTokens = user.inputTokens; // From User model
-    const userOutputTokens = user.outputTokens; // From User model
+    // Retrieve current token usage from the user
+    const currentInputTokens = user.inputTokens;
+    const currentOutputTokens = user.outputTokens;
 
-    // Check if the token usage has exceeded the plan limits
-    if (userInputTokens + inputTokens > inputTokenLimit) {
-      return res.status(400).json({ message: "Input token limit exceeded" });
+    // Check if current token usage exceeds limits (without adding new tokens)
+    if (currentInputTokens > inputTokenLimit) {
+      return res.status(400).json({ message: "Existing input tokens exceed limit" });
     }
-    if (userOutputTokens + outputTokens > outputTokenLimit) {
-      return res.status(400).json({ message: "Output token limit exceeded" });
+    if (currentOutputTokens > outputTokenLimit) {
+      return res.status(400).json({ message: "Existing output tokens exceed limit" });
     }
 
     // Update token usage in the User model
@@ -110,7 +108,7 @@ router.post("/users/:userId/check-tokens", authMiddleware, async (req, res) => {
         id: user._id,
         inputTokens: user.inputTokens,
         outputTokens: user.outputTokens,
-        subscription: user.subscription, // Include plan details in the response
+        subscription: user.subscription,
       },
     });
   } catch (error) {
