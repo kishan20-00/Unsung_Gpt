@@ -177,7 +177,7 @@ const Chat = () => {
       }
     } catch (error) {
       console.error("Error validating token limits:", error);
-      alert("Error validating token limits. Please try again.");
+      alert("Token Limit has been exceeded.");
       return;
     }
   
