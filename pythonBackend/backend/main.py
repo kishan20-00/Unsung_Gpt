@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from models import User, UserCreate, Token
 from database import (
@@ -7,12 +7,16 @@ from database import (
     verify_password,
     create_access_token,
     authenticate_user,
-    hash_password
+    users_collection,
+    get_user_with_plan
 )
 from datetime import timedelta
 from auth import get_current_active_user
 from bson import ObjectId
-from typing import Annotated
+from typing import Annotated, Optional
+from pydantic import BaseModel
+import os
+from plan_router import router as plan_router
 
 app = FastAPI()
 
@@ -35,20 +39,48 @@ async def register(user: UserCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/login", response_model=Token)
-async def login(email: str, password: str):
-    user = await authenticate_user(email, password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+@app.post("/login")
+async def login(request: Request):
+    try:
+        data = await request.json()
+        email = data.get("email")
+        password = data.get("password")
+        
+        if not email or not password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email and password are required"
+            )
+
+        user = await authenticate_user(email, password)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect email or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        access_token_expires = timedelta(minutes=60)
+        access_token = create_access_token(
+            data={"sub": str(user.id)},  # Using standard 'sub' claim
+            expires_delta=access_token_expires
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"id": str(user.id)}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "name": user.name
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 @app.get("/profile", response_model=User)
 async def read_profile(current_user: Annotated[User, Depends(get_current_active_user)]):
@@ -70,29 +102,45 @@ async def update_user(
     updated_user = await users_collection.find_one({"_id": ObjectId(current_user.id)})
     return User(**updated_user)
 
+class TokenUpdateRequest(BaseModel):
+    input_tokens: Optional[int] = 0
+    output_tokens: Optional[int] = 0
+    subscription: Optional[str] = None
+
 @app.put("/updateTokens", response_model=User)
 async def update_user_tokens(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    input_tokens: int = 0,
-    output_tokens: int = 0,
-    subscription: str = None
+    update_data: TokenUpdateRequest,
+    current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    update_data = {}
+    update_payload = {}
     
-    if input_tokens is not None:
-        update_data["$inc"] = {"input_tokens": input_tokens}
-    if output_tokens is not None:
-        if "$inc" in update_data:
-            update_data["$inc"]["output_tokens"] = output_tokens
+    if update_data.input_tokens is not None:
+        update_payload["$inc"] = {"input_tokens": update_data.input_tokens}
+    if update_data.output_tokens is not None:
+        if "$inc" in update_payload:
+            update_payload["$inc"]["output_tokens"] = update_data.output_tokens
         else:
-            update_data["$inc"] = {"output_tokens": output_tokens}
-    if subscription:
-        update_data["$set"] = {"subscription": ObjectId(subscription)}
+            update_payload["$inc"] = {"output_tokens": update_data.output_tokens}
+    if update_data.subscription:
+        # No ObjectId conversion needed now
+        update_payload["$set"] = {"subscription": update_data.subscription}
     
     await users_collection.update_one(
         {"_id": ObjectId(current_user.id)},
-        update_data
+        update_payload
     )
     
     updated_user = await users_collection.find_one({"_id": ObjectId(current_user.id)})
     return User(**updated_user)
+
+@app.get("/user-with-plan")
+async def get_user_with_plan_endpoint(
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    user_data = await get_user_with_plan(current_user.id)
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user_data
+
+app.include_router(plan_router)
+

@@ -5,6 +5,7 @@ from models import TokenData, User
 from database import SECRET_KEY, ALGORITHM, users_collection
 from typing import Annotated
 from bson import ObjectId
+import os
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -16,11 +17,12 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("id")
+        user_id: str = payload.get("sub")  # Changed from "id" to "sub"
         if user_id is None:
             raise credentials_exception
         token_data = TokenData(id=user_id)
-    except JWTError:
+    except JWTError as e:
+        print(f"JWT Error: {str(e)}")
         raise credentials_exception
     
     user = await users_collection.find_one({"_id": ObjectId(token_data.id)})

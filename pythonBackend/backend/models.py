@@ -28,7 +28,7 @@ class User(UserBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     input_tokens: int = 0
     output_tokens: int = 0
-    subscription: Optional[PyObjectId] = None
+    subscription: Optional[str] = None  # Changed from ObjectId to string
     
     model_config = ConfigDict(
         json_encoders={ObjectId: str},
