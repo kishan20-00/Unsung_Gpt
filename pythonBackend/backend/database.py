@@ -9,6 +9,7 @@ from jose import JWTError, jwt
 from typing import Optional
 import bcrypt
 import redis  # Add redis import
+from llm_log import LLMLogCreate, LLMLog
 
 # Security Configuration
 SECRET_KEY = os.getenv("JWT_SECRET", "your-secret-key-here")
@@ -120,3 +121,21 @@ async def authenticate_user(email: str, password: str) -> Optional[UserInDB]:
     if not user or not verify_password(password, user.password):
         return None
     return user
+
+
+# LLM Logs Collection
+llm_logs_collection = db["llm_logs"]
+
+async def create_llm_log(log: LLMLogCreate) -> LLMLog:
+    log_dict = log.dict()
+    log_dict["timestamp"] = log_dict.get("timestamp") or datetime.utcnow()
+    result = await llm_logs_collection.insert_one(log_dict)
+    created_log = await llm_logs_collection.find_one({"_id": result.inserted_id})
+    return LLMLog(**{**created_log, "id": str(created_log["_id"])})
+
+async def get_user_logs(email: str, limit: int = 100) -> list[LLMLog]:
+    logs = await llm_logs_collection.find({"email": email})\
+        .sort("timestamp", -1)\
+        .limit(limit)\
+        .to_list(limit)
+    return [LLMLog(**{**log, "id": str(log["_id"])}) for log in logs]
