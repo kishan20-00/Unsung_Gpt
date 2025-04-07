@@ -6,6 +6,7 @@ import Register from './screens/Register';
 import PrivateRoute from './components/PrivateRoute';
 import Profile from './screens/Profile';
 import { CssBaseline, ThemeProvider } from '@mui/material';
+import LogsPage from "./screens/Log";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/chat" element={<Chatapp />} />
           <Route path="/" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/logs" element={<LogsPage />} />
           <Route 
             path="/profile" 
             element={

@@ -49,3 +49,24 @@ button:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
 }
+
+.date-picker {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.recharts-tooltip-label {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.recharts-default-tooltip {
+  background-color: white !important;
+  border: 1px solid #ccc !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}

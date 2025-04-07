@@ -50,7 +50,7 @@ async def register(user: UserCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/login")
+@app.post("/login", response_model=dict)
 async def login(request: Request):
     try:
         data = await request.json()
@@ -73,7 +73,7 @@ async def login(request: Request):
         
         access_token_expires = timedelta(minutes=60)
         access_token = create_access_token(
-            data={"sub": str(user.id)},  # Using standard 'sub' claim
+            data={"sub": str(user.id)},  # Make sure user.id exists in UserInDB
             expires_delta=access_token_expires
         )
         

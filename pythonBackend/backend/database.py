@@ -139,3 +139,116 @@ async def get_user_logs(email: str, limit: int = 100) -> list[LLMLog]:
         .limit(limit)\
         .to_list(limit)
     return [LLMLog(**{**log, "id": str(log["_id"])}) for log in logs]
+
+async def get_filtered_logs(
+    email: str,
+    model: Optional[str] = None,
+    limit: int = 100,
+    skip: int = 0
+) -> list[LLMLog]:
+    """
+    Get logs with optional model filtering
+    """
+    query = {"email": email}
+    if model:
+        query["model"] = model
+        
+    logs = await llm_logs_collection.find(query)\
+        .sort("timestamp", -1)\
+        .skip(skip)\
+        .limit(limit)\
+        .to_list(limit)
+        
+    return [LLMLog(**{**log, "id": str(log["_id"])}) for log in logs]
+
+async def get_token_usage_by_model(email: str, start_date: datetime, end_date: datetime, model: Optional[str] = None):
+    match_filter = {
+        "email": email,
+        "timestamp": {"$gte": start_date, "$lte": end_date}
+    }
+    if model:
+        match_filter["model"] = model
+
+    pipeline = [
+        {"$match": match_filter},
+        {
+            "$group": {
+                "_id": {
+                    "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+                    "model": "$model"
+                },
+                "total_tokens": {"$sum": {"$add": ["$input_tokens", "$output_tokens"]}}
+            }
+        },
+        {
+            "$group": {
+                "_id": "$_id.date",
+                "models": {
+                    "$push": {
+                        "name": "$_id.model",
+                        "total_tokens": "$total_tokens"
+                    }
+                }
+            }
+        },
+        {"$sort": {"_id": 1}},
+        {"$project": {"date": "$_id", "models": 1, "_id": 0}}
+    ]
+    
+    return await llm_logs_collection.aggregate(pipeline).to_list(None)
+
+async def get_api_call_counts(email: str, start_date: datetime, end_date: datetime, model: Optional[str] = None):
+    match_filter = {
+        "email": email,
+        "timestamp": {"$gte": start_date, "$lte": end_date}
+    }
+    if model:
+        match_filter["model"] = model
+
+    pipeline = [
+        {"$match": match_filter},
+        {
+            "$group": {
+                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+                "count": {"$sum": 1}
+            }
+        },
+        {"$sort": {"_id": 1}},
+        {"$project": {"date": "$_id", "count": 1, "_id": 0}}
+    ]
+    
+    return await llm_logs_collection.aggregate(pipeline).to_list(None)
+
+async def get_model_usage_stats(email: str):
+    # Get total tokens and calls
+    total_tokens = await llm_logs_collection.aggregate([
+        {"$match": {"email": email}},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": {"$add": ["$input_tokens", "$output_tokens"]}},
+            "count": {"$sum": 1}
+        }}
+    ]).to_list(None)
+    
+    # Get breakdown by model
+    models = await llm_logs_collection.aggregate([
+        {"$match": {"email": email}},
+        {"$group": {
+            "_id": "$model",
+            "usage": {"$sum": {"$add": ["$input_tokens", "$output_tokens"]}}
+        }},
+        {"$sort": {"usage": -1}}
+    ]).to_list(None)
+    
+    # Calculate percentages
+    total = total_tokens[0]["total"] if total_tokens else 1
+    models_with_pct = [
+        {**m, "percentage": round((m["usage"] / total) * 100, 1)}
+        for m in models
+    ]
+    
+    return {
+        "total_tokens": total_tokens[0]["total"] if total_tokens else 0,
+        "total_calls": total_tokens[0]["count"] if total_tokens else 0,
+        "models": models_with_pct
+    }
